@@ -55,8 +55,8 @@ urlpatterns = [
                   path('save_ta_message/', views.terminate_account_message_create, name='ta_message_create'),
                   # saver terminate acc message
                   path('login/', views.login_view, name='login'),
-                  path('user/authenticate/<str:email>/', views.auth_password, name='auth_password'),
-                  path('user/delete/<str:email>/', views.delete_user, name='delete_user'),
+                  path('user/authenticate/', views.auth_password, name='auth_password'),
+                  path('user/delete/<str:userId>/', views.delete_user, name='delete_user'),
                   path('setworkout/', views.set_workout, name='setworkout'),
                   path('workoutdata/', views.wrk_data, name='workoutdata'),
                   path('login-sm/', views.social_media_login, name='login-sm'),

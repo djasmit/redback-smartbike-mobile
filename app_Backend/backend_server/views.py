@@ -212,15 +212,17 @@ def login_view(request):
         except MyUser.DoesNotExist:
             return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
-@api_view(['GET'])
+@api_view(['POST']) #changed to post for more secure authorization
 @csrf_exempt
-def auth_password(request, email, format=None):
-    if request.method == 'GET':
-        user_password = request.GET.get('password')
-        print('pass:' + user_password)
+def auth_password(request, format=None):
+    if request.method == 'POST': 
+        userId = request.data.get('userId')
+        password = request.data.get('password')
+
+        print(f'userId: {userId}, password: {password}') #debug
         try:
-            user = MyUser.objects.get(pk=email) 
-            if user.password == user_password:
+            user = MyUser.objects.get(id=userId) 
+            if user.password == password: 
                 return Response(status=status.HTTP_200_OK)
             else:
                 return Response(status=status.HTTP_403_FORBIDDEN)
@@ -229,17 +231,21 @@ def auth_password(request, email, format=None):
     else:
         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
-@api_view(['DELETE'])
+@api_view(['DELETE']) #replaced email with userID for more security
 @csrf_exempt
-def delete_user(request, email):
-    print('email received:' + email)
+def delete_user(request, userId):
+    print('userId received:' + userId)
+
     if request.method == 'DELETE':
         try:
-            user = MyUser.objects.get(pk=email)
+            user = MyUser.objects.get(id=userId)
             user.delete()
             return JsonResponse({"message": "User deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
         except MyUser.DoesNotExist:
             return JsonResponse({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    else:  
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 def get_all_details(request):
     if request.method == 'POST':
