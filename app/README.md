@@ -27,7 +27,7 @@ API_URL_BASE = http://<your_machine_network_address>:8000
 #### Example:
 API_URL_BASE = http://<192.168.3.103>:8000
 
-**Note:** MUST USE HTTP protocol, not HTTPS! Use this address and port to host the [backend](../app_backend/README.md#8-run-the-server)
+**Note:** MUST USE HTTP protocol, not HTTPS! Use this address and port to host the [backend](../app_Backend/README.md#8-run-the-server)
  
 ### 3. Install Dependencies
 Navigate to the pubspec.yaml file and run:  

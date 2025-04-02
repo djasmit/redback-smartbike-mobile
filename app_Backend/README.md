@@ -17,8 +17,9 @@ Click on the Fork button at the top right corner of the page. This will create a
 
 ### 2. Clone the Forked Repository
 After forking, clone the repository to your local machine by opening a terminal and running the following commands:
-git clone https://github.com/<Your_GitHub_Username>/redback-smartbike-mobile.git
-cd redback-smartbike-mobile
+*git clone https://github.com/<Your_GitHub_Username>/redback-smartbike-mobile.git*  
+*cd redback-smartbike-mobile*  
+
 Replace <Your_GitHub_Username> with your actual GitHub username.
 This will download the repository files to your local system and change your directory to the repository's root.
 
