@@ -1,5 +1,5 @@
 # Redback SmartBike Mobile App Frontend Setup
-[Backend README](../app_backend/README.md) 
+[Backend README](../app_Backend/README.md) 
 
 ## Prerequisites
 - Android Studio or Visual Studio Code  
