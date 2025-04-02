@@ -75,7 +75,7 @@ From the backend_server directory, run the following commands to set up the data
 
 ### 8. Run the Server
 Start the backend server:  
-*python manage.py runserver <your-ip-address>:8000*  
+*python manage.py runserver `<your-ip-address>`:8000*  
 
 Use the SAME ip address and port as the API_URL_BASE variable on the [frontend](../app/README.md#2-configure-environment-variables).
 

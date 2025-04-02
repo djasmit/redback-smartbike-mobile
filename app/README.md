@@ -45,7 +45,7 @@ Ensure that the backend server is running as the mobile app will need to communi
 Version Control Best Practices  
 - New Features and Fixes: Always create a new branch before starting work on a new feature or fix:  
 bash  
-*git checkout -b <name-of-fix-or-feature>*  
+*git checkout -b `<name-of-fix-or-feature>`*  
 
 - Commit Changes: Commit your changes frequently to maintain a good history and easier code reviews:  
 bash  
