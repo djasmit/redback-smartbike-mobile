@@ -92,10 +92,11 @@ Solution:
 #### Check your Python version and install Pillow
 python -m pip install Pillow
 #### OR
-python3 -m pip install Pillow  
-Error 2: Dotenv Module Not Found  
-Description: If the system cannot find the dotenv module, you might see a ModuleNotFoundError.  
-ModuleNotFoundError: No module named 'dotenv'  
+python3 -m pip install Pillow   
+
+### Error 2: Dotenv Module Not Found  
+Description: If the system cannot find the dotenv module, you might see a ModuleNotFoundError.   
+*ModuleNotFoundError: No module named 'dotenv'*  
 
 #### Solution:
 1. Check if python-dotenv is already installed:  

@@ -39,10 +39,11 @@ This command will install all the necessary Flutter dependencies specified in pu
 Ensure that the backend server is running as the mobile app will need to communicate with it.
 
 ### 5. Start the App
-- Using VS Code: Open lib/main.dart and press the run (play) button at the top right.  
-- Using Android Studio: Run the project directly from the IDE.  
+Using VS Code: Open lib/main.dart and press the run (play) button at the top right.  
 
-Version Control Best Practices  
+Using Android Studio: Run the project directly from the IDE.  
+
+#### Version Control Best Practices  
 - New Features and Fixes: Always create a new branch before starting work on a new feature or fix:  
 bash  
 *git checkout -b `<name-of-fix-or-feature>`*  
