@@ -14,6 +14,9 @@ class UserSessionProvider with ChangeNotifier {
   String? _imagePath;
   String? _id;
 
+  String? _accessToken;
+  String? _refreshToken;
+
   // Getters
   String? get email => _email;
 
@@ -31,6 +34,9 @@ class UserSessionProvider with ChangeNotifier {
 
   String? get id => _id;
 
+  String? get accessToken => _accessToken;
+  String? get refreshToken => _refreshToken;
+
   // Method to save user session data securely
   Future<void> saveUserSession({
     String? email,
@@ -41,6 +47,8 @@ class UserSessionProvider with ChangeNotifier {
     String? phoneNumber,
     String? imagePath,
     String? id,
+    String? accessToken,
+    String? refreshToken,
   }) async {
     _email = email;
     _username = username;
@@ -50,6 +58,8 @@ class UserSessionProvider with ChangeNotifier {
     _phoneNumber = phoneNumber;
     _imagePath = imagePath;
     _id = id;
+    _accessToken = accessToken;
+    _refreshToken = refreshToken;
 
     await _storage.write(key: 'email', value: _email);
     await _storage.write(key: 'username', value: _username);
@@ -59,6 +69,8 @@ class UserSessionProvider with ChangeNotifier {
     await _storage.write(key: 'phoneNumber', value: _phoneNumber);
     await _storage.write(key: 'imagePath', value: _imagePath);
     await _storage.write(key: 'id', value: _id);
+    await _storage.write(key: '', value: _accessToken);
+    await _storage.write(key: 'refresh_token', value: _refreshToken);
 
     notifyListeners(); // Notify listeners to update UI
   }
@@ -73,10 +85,12 @@ class UserSessionProvider with ChangeNotifier {
     _phoneNumber = await _storage.read(key: 'phoneNumber');
     _imagePath = await _storage.read(key: 'imagePath');
     _id = await _storage.read(key: 'id');
+    _accessToken = await _storage.read(key: 'access_token');
+    _refreshToken = await _storage.read(key: 'refresh_token');
 
     if (kDebugMode) {
       print(
-          "Session Load - Data $_email | $_dob | $_id | $_imagePath | $_name | $_phoneNumber | $_surname | $_username ");
+          "Session Load - Data $_email | $_dob | $_id | $_imagePath | $_name | $_phoneNumber | $_surname | $_username \nTokens: $_accessToken\n$refreshToken");
     }
     notifyListeners();
   }
@@ -91,6 +105,8 @@ class UserSessionProvider with ChangeNotifier {
     _phoneNumber = null;
     _imagePath = null;
     _id = null;
+    _accessToken = null;
+    _refreshToken = null;
 
     await _storage.delete(key: 'email');
     await _storage.delete(key: 'username');
@@ -100,6 +116,8 @@ class UserSessionProvider with ChangeNotifier {
     await _storage.delete(key: 'phoneNumber');
     await _storage.delete(key: 'imagePath');
     await _storage.delete(key: 'id');
+    await _storage.delete(key: 'access_token');
+    await _storage.delete(key: 'refresh_token');
 
     notifyListeners();
   }

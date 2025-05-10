@@ -30,7 +30,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY') 
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = 'True' 
+DEBUG = os.getenv('DEBUG','').strip().upper()
 
 
 # settings.py
@@ -188,6 +188,17 @@ LOGGING = {
     },
 }
 
+print(DEBUG)
+AUTH_USER_MODEL = 'backend_server.MyUser'
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        ('rest_framework.permissions.AllowAny',) if DEBUG == 'TRUE' 
+        else ('rest_framework.permissions.IsAuthenticated',)
+    ),
+}
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

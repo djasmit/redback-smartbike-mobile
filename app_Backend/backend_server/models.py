@@ -1,5 +1,31 @@
+from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.db import models
 from django.utils import timezone
+from django.contrib.auth.models import BaseUserManager
+
+#user manager required for integration with authorization
+class MyUserManager(BaseUserManager):
+    def create_user(self, email, username, password=None, **extra_fields):
+        if not email: raise ValueError('The Email field must be set')
+
+        user = self.model(email=email, username=username, **extra_fields)
+        user.save(using=self._db)
+        return user
+
+    #admin user
+    def create_superuser(self, email, username, password=None, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+
+        if extra_fields.get('is_staff') is not True:
+            raise ValueError('Superuser must have is_staff=True.')
+        if extra_fields.get('is_superuser') is not True:
+            raise ValueError('Superuser must have is_superuser=True.')
+
+        return self.create_user(email, username, password, **extra_fields)
+
+    def get_by_natural_key(self, email):
+        return self.get(email__iexact=email)
 
 
 # When creating a user you need to provide all 3 fields, out of which:
@@ -7,7 +33,7 @@ from django.utils import timezone
 #           - username will need to be unique
 #   TODO:   - set password max length to 20 in Flutter
 #           - used in Flutter in signup.dart
-class MyUser(models.Model):
+class MyUser(AbstractBaseUser, PermissionsMixin): #now inherits from AbstractBaseUser and PermissionsMixin so we can integrate Django's token auth
     id = models.CharField(max_length=50, unique=True, default='')
     email = models.CharField(max_length=50, primary_key=True )
     username = models.CharField(max_length=20, unique=True)
@@ -17,6 +43,14 @@ class MyUser(models.Model):
     login_id = models.CharField(null=True, max_length=50, unique=True)
     otp = models.CharField(max_length=6, blank=True, null=True)  # OTP field
     otp_created_at = models.DateTimeField(blank=True, null=True)  # Optional: to track OTP creation time
+
+    #required additions for AUTH_USER_MODEL    
+    objects = MyUserManager() 
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+    last_login = models.DateTimeField(null=True, blank=True)
+    USERNAME_FIELD = 'email' #sets email as identifier
+    REQUIRED_FIELDS = ['username'] #requires a username field
 
     # generate the id, starting at 1000, and add 1 to each new user
     def save(self, *args, **kwargs):

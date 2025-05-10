@@ -108,8 +108,14 @@ class _LoginPageState extends State<LoginPage> {
       print('$responseData');
       // see Django views 'login_view' Response
       var accountDetails = responseData['account_details'][0];
+
+      //fetch tokens (tested, working)
+      String access_tokens = responseData['access_token'].toString();
+      String refresh_tokens = responseData['refresh_token'].toString();
+
       // save all to the Provider, so that we have all details for current user. Also Provider distributes data across the widgets
-      Provider.of<UserDataProvider>(context, listen: false).updateUserDetails(
+      final loginUser = Provider.of<UserDataProvider>(context, listen: false);
+      loginUser.updateUserDetails(
         context,
         email: accountDetails['email'],
         username: accountDetails['username'],
@@ -119,7 +125,13 @@ class _LoginPageState extends State<LoginPage> {
         phoneNumber: accountDetails['phone_number'],
         imagePath: accountDetails['image'],
         id: id,
+        accessToken: access_tokens,
+        refreshToken: refresh_tokens
       );
+
+      print('Access: ${access_tokens} \nRefresh: ${refresh_tokens}' );
+      print('Login Test: ${loginUser.userDetails?.email}');
+      print('Access: ${loginUser.accessToken} \nRefresh: ${loginUser.refreshToken}' );
 
       // broadcast those changes
       Provider.of<UserDataProvider>(context, listen: false).notifyListeners();

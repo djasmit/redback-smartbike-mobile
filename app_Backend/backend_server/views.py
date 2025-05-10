@@ -35,6 +35,9 @@ import random
 from django.utils import timezone
 from django.contrib.auth.hashers import check_password
 from django.contrib.auth.hashers import make_password
+from rest_framework_simplejwt.tokens import RefreshToken #token auth
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.decorators import permission_classes
 import os
 
 logger = logging.getLogger(__name__)
@@ -53,9 +56,17 @@ def user_detail(request, userId):
     print('userId received:' + userId)
 
     #find account via MyUser id
-    user = MyUser.objects.filter(id=userId).first()
+    # Check if authenticated via token
+    if request.user.is_authenticated:
+        user = request.user
+    else:
+        # fallback lookup if in debug mode
+        user = MyUser.objects.filter(id=userId).first()
+        
     if (user == None):
          return Response("User not found!", status=status.HTTP_404_NOT_FOUND) 
+
+    print(user.email)
 
     account = AccountDetails.objects.filter(email=user).first()
     if (account == None):
@@ -91,6 +102,7 @@ def get_user_details(request, emaill, format=None):
 # view to get list of user account details (not users)
 ##users/
 @api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
 def user_list(request, format=None):
     if request.method == 'GET':
         users = AccountDetails.objects.all()
@@ -106,6 +118,7 @@ def user_list(request, format=None):
 #view to create new direct or social-media account
 ##signup/
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def signup(request, format=None):
     if request.method == 'POST':
         fetched_email = request.data.get("email")
@@ -129,6 +142,7 @@ def signup(request, format=None):
 #view to login to social media account
 ##login-sm/
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def social_media_login(request, format=None):
     if request.method == 'POST':
         fetched_email = request.data.get("email")
@@ -136,24 +150,36 @@ def social_media_login(request, format=None):
         fetched_id = request.data.get("login_id")
         fetched_type = request.data.get("login_type")
 
+        print("getting fetches")
+
         if fetched_id is None and fetched_type is None:
             return Response({"message": "Failed to Authenticate User", "errors": "login_id and type is required!"},
                             status=status.HTTP_403_FORBIDDEN)
         
 
+        print("login and type success")
         user_is_enrolled = MyUser.objects.filter(
             Q(login_id=fetched_id) & Q(login_type=fetched_type) & Q(email__iexact=fetched_email)).first()
         user_is_registered = MyUser.objects.filter(
             Q(login_id__isnull=True) & Q(login_type__isnull=True) & Q(email__iexact=fetched_email)).exists()
 
+        print("user enrolled check success")
         if user_is_enrolled is not None:
+            print("user enrolled")
             account_details = AccountDetails.objects.filter(email=user_is_enrolled)
             serializer = AccountDetailsSerializer(account_details, many=True)
+            print('serializer success')
+
+            #logging in - get user tokens
+            tokens = get_user_tokens(user_is_enrolled)
+            print('got tokens')
 
             return Response({
                 'message': 'Login successful',
                 'id': user_is_enrolled.id,
                 'account_details': serializer.data,
+                'access_token': tokens['access_token'],
+                'refresh_token': tokens['refresh_token']
             }, status=status.HTTP_200_OK)
         elif user_is_registered:
             return Response({"message": "User is already registered directly to the platform", "code": 1001},
@@ -167,10 +193,16 @@ def social_media_login(request, format=None):
                 account_details = AccountDetails.objects.filter(email=user)
                 account_serializer = AccountDetailsSerializer(account_details, many=True)
 
+                
+                #logging in - get user tokens
+                tokens = get_user_tokens(user)
+
                 return Response({
                     'message': 'Login successful - new user',
                     'id': serializer.data["id"],
                     'account_details': account_serializer.data,
+                    'access_token': tokens['access_token'],
+                    'refresh_token': tokens['refresh_token']
                 }, status=status.HTTP_200_OK)
             elif serializer.errors.get('username') != "my user with this username already exists.":
                 suffix = str(datetime.now())[-5:]
@@ -183,10 +215,15 @@ def social_media_login(request, format=None):
                     account_details = AccountDetails.objects.filter(email=user)
                     account_serializer = AccountDetailsSerializer(account_details, many=True)
 
+                    #logging in - get user tokens
+                    tokens = get_user_tokens(user)
+
                     return Response({
                         'message': 'Login successful - new user',
                         'id': serializer.data.id,
                         'account_details': account_serializer.data,
+                        'access_token': tokens['access_token'],
+                        'refresh_token': tokens['refresh_token']
                     }, status=status.HTTP_200_OK)
                 else:
                     return Response({"message": "Failed to create user.", "errors": serializer.errors},
@@ -218,21 +255,41 @@ def terminate_account_message_create(request, format=None):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+#get acccess and refresh tokens for user
+def get_user_tokens(user):
+    refresh = RefreshToken.for_user(user)
+
+    return {
+        'access_token': str(refresh.access_token),
+        'refresh_token': str(refresh)
+    }
+
+
 #view to login to direct user account
 ##login/
 @api_view(['POST'])
+@permission_classes([AllowAny])
 @csrf_exempt
 def login_view(request):
+
+    print('getting login')
     if request.method == 'POST':
+        print('login post')
         email = request.data.get('email')
         password = request.data.get('password')
 
         try:
-            user = MyUser.objects.get(email__iexact=email)
-            print(check_password(password, user.password))
+            print('trying user')
+            #user = MyUser.objects.get(email__iexact=email)
+            user = authenticate(request, username=email, password=password)
+            if (user == None): return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+            print('trying check')
             if check_password(password, user.password): #compares received password to stored hashed
-                request.session['email'] = user.email
-                request.session['id'] = user.id  
+                #request.session['email'] = user.email
+                #request.session['id'] = user.id  
+
+                #logging in - get user tokens
+                tokens = get_user_tokens(user)
 
                 print(user.email)
                 account_details = AccountDetails.objects.filter(email=user)
@@ -242,11 +299,16 @@ def login_view(request):
                     'message': 'Login successful',
                     'id': user.id,
                     'account_details': serializer.data,
+                    'access_token': tokens['access_token'],
+                    'refresh_token': tokens['refresh_token']
                 }, status=status.HTTP_200_OK)
             else:
                 return Response({'message': 'Incorrect password'}, status=status.HTTP_401_UNAUTHORIZED)
         except MyUser.DoesNotExist:
             return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            print(e)
+            return Response({'message': e})
 
 # view to authenticate account password (only used for termination)
 ##user/authenticate/<str:userID>
@@ -301,7 +363,10 @@ def get_all_details(request):
 @api_view(['POST'])
 def set_workout(request):
     if request.method == 'POST':
+        print(request.data)
         workout_type_serializer = WorkoutTypeSerializer(data=request.data)
+        print('serialized')
+        #print(f'data: {workout_type_serializer.data}')
         if workout_type_serializer.is_valid():
             workout_type = workout_type_serializer.save()
             return Response(workout_type_serializer.data, status=status.HTTP_201_CREATED)
@@ -336,6 +401,7 @@ class WorkoutViewSet(viewsets.ModelViewSet):
 @csrf_exempt  
 def wrk_finished(request):
     try:
+        print(request.data)
         session_id = request.data.get('session_id')
         finished = request.data.get('finished')
 
@@ -395,6 +461,7 @@ def get_otp(increment):
 # View to handle password reset requests
 ##user/password_reset/
 @api_view(['POST'])
+@permission_classes([AllowAny])
 @csrf_exempt
 def password_reset_request(request):
     if request.method == "POST":
@@ -443,6 +510,7 @@ def password_reset_request(request):
 # View to handle otp verification
 ##user/password_reset/otp_validate
 @api_view(['POST'])
+@permission_classes([AllowAny])
 @csrf_exempt
 def password_reset_otp_validation(request):
     if request.method == "POST":
@@ -489,6 +557,7 @@ def password_reset_otp_validation(request):
 # View to handle otp verification
 ##user/password_reset/new_password
 @api_view(['POST'])
+@permission_classes([AllowAny])
 @csrf_exempt
 def password_reset_new_password(request):
     if request.method == "POST":

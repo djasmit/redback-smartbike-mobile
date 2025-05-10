@@ -17,8 +17,12 @@ class UserDataProvider extends ChangeNotifier {
   }
 
   UserDetails? _userDetails;
+  String? _accessToken;
+  String? _refreshToken;
 
   UserDetails? get userDetails => _userDetails;
+  String? get accessToken => _accessToken;
+  String? get refreshToken => _refreshToken;
 
   void updateUserDetails(
       BuildContext context, {
@@ -30,6 +34,8 @@ class UserDataProvider extends ChangeNotifier {
         String? phoneNumber,
         String? imagePath,
         String? id,
+        String? accessToken,
+        String? refreshToken
       }) {
     _userDetails = UserDetails(
       email: email ?? _userDetails?.email ?? '',
@@ -41,6 +47,8 @@ class UserDataProvider extends ChangeNotifier {
       imagePath: imagePath ?? _userDetails?.imagePath ?? '',
       id: id ?? _userDetails?.id ?? '',
     );
+    _accessToken = accessToken ?? _accessToken;
+    _refreshToken = refreshToken ?? _refreshToken;
 
     // Save the updated user details securely
     final sessionProvider = context.read<UserSessionProvider>();
@@ -53,6 +61,8 @@ class UserDataProvider extends ChangeNotifier {
       phoneNumber: _userDetails?.phoneNumber,
       imagePath: _userDetails?.imagePath,
       id: _userDetails?.id,
+      accessToken: _accessToken,
+      refreshToken: _refreshToken
     );
 
     notifyListeners();
@@ -69,8 +79,11 @@ class UserDataProvider extends ChangeNotifier {
       imagePath: sessionProvider.imagePath ?? '',
       id: sessionProvider.id ?? '',
     );
+    _accessToken = sessionProvider.accessToken;
+    _refreshToken = sessionProvider.refreshToken;
+
     if (kDebugMode) {
-      print("Data Loaded - Data $_userDetails ");
+      print("Data Loaded - Data $_userDetails \nTokens: $_accessToken\n$refreshToken");
     }
     notifyListeners();
   }

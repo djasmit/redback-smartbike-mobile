@@ -22,9 +22,12 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import path
 from django.contrib.auth import views as auth_views
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+
 
 urlpatterns = [
-                  # Other URL patterns
+                  # Other URL patterns    
+                  path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),    #used to get new access token - requires JSON post
                   path('admin/', admin.site.urls),  # URL for the Django admin interface
                   path('users/', views.user_list),  # URL for handling user list operations (GET and POST)
                   path('update/<str:userId>/', views.user_detail),
