@@ -16,10 +16,10 @@ class UserSerializer(serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        
-        # Allow password to be visible for debugging
+        # Check debug from environment and set password field visibility
         debug_mode = os.getenv("DEBUG", "").upper() == "TRUE"
         if debug_mode:
+            # Allow password to be visible for debugging (not recommended in production!)
             self.fields['password'].write_only = False
         else:
             self.fields['password'].write_only = True
