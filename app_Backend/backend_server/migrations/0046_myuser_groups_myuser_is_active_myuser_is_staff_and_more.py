@@ -7,7 +7,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('auth', '0012_alter_user_first_name_max_length'),
-        ('backend_server', '0044_myuser_otp_myuser_otp_created_at'),
+        ('backend_server', '0045_alter_helpcentremessage_thread_number_and_more'),
     ]
 
     operations = [
