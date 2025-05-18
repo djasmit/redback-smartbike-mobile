@@ -225,8 +225,12 @@ def terminate_account_message_create(request, format=None):
 @csrf_exempt
 def login_view(request):
     if request.method == 'POST':
+
         email = request.data.get('email')
         password = request.data.get('password')
+
+        if (email == None or password == None):
+            return Response({'error': 'Invalid Login Fields!'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             user = MyUser.objects.get(email__iexact=email)
@@ -245,9 +249,11 @@ def login_view(request):
                     'account_details': serializer.data,
                 }, status=status.HTTP_200_OK)
             else:
-                return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND) #was 401, but we don't want to tell hackers they have the right email
+                return Response({'error': 'Email or password details incorrect'}, status=status.HTTP_401_UNAUTHORIZED)
         except MyUser.DoesNotExist:
-            return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'Email or password details incorrect'}, status=status.HTTP_401_UNAUTHORIZED)
+        except Exception as e:
+            return Response({"error": "Failed to login", "errors": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # view to authenticate account password (only used for termination)
 ##user/authenticate/<str:userID>
@@ -312,7 +318,7 @@ def set_workout(request):
 
             #block manual setting of session_ID in production mode, but allow setting for testing in debug
             if ('session_id' in data):
-                if (not getDebugMode()):
+                if (not settings.DEBUG):
                     data['session_id'] = None
                 
             workout_type_serializer = WorkoutTypeSerializer(data=data)
@@ -410,7 +416,7 @@ def get_otp(increment):
     otp_min = 100000
     otp_max = 999999
 
-    if getDebugMode():
+    if settings.DEBUG:
         increment = int(increment)
         otp = str(otp_min+increment)
     else:
@@ -543,6 +549,3 @@ def password_reset_new_password(request):
         else:
             return Response({"error": "Invalid OTP Token"}, status=status.HTTP_401_UNAUTHORIZED)  # User not found response
     return Response({"error": "Invalid request method."}, status=status.HTTP_400_BAD_REQUEST)  # Invalid method response
-
-def getDebugMode():
-    return os.getenv('DEBUG','').strip().upper() == 'TRUE'
