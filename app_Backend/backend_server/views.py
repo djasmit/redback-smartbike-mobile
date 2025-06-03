@@ -294,7 +294,6 @@ def delete_user(request, userId):
     else:  
         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
-## UNNUSED
 def get_all_details(request):
     if request.method == 'POST':
         all_details = AccountDetails.objects.all().values()
@@ -549,3 +548,25 @@ def password_reset_new_password(request):
         else:
             return Response({"error": "Invalid OTP Token"}, status=status.HTTP_401_UNAUTHORIZED)  # User not found response
     return Response({"error": "Invalid request method."}, status=status.HTTP_400_BAD_REQUEST)  # Invalid method response
+
+def getDebugMode():
+    return os.getenv('DEBUG','').strip().upper() == 'TRUE'
+  
+# --- Schedule Views ---
+@api_view(['POST'])
+def create_schedule(request):
+    serializer = ScheduleSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+@api_view(['GET'])
+def get_schedules(request, email):
+    try:
+        user = MyUser.objects.get(email=email)
+        schedules = Schedule.objects.filter(user=user).order_by('date', 'time')
+        serializer = ScheduleSerializer(schedules, many=True)
+        return Response(serializer.data)
+    except MyUser.DoesNotExist:
+        return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
