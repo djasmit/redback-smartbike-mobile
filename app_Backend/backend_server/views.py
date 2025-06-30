@@ -33,8 +33,11 @@ import json
 from .models import MyUser
 import random
 from django.utils import timezone
-from django.contrib.auth.hashers import check_password
-from django.contrib.auth.hashers import make_password
+from django.http import JsonResponse, HttpResponse
+from mongoengine import Document, StringField, DateTimeField
+from datetime import datetime
+from django.contrib.auth.hashers import check_password, make_password
+
 import os
 
 logger = logging.getLogger(__name__)
@@ -544,10 +547,44 @@ def password_reset_new_password(request):
                         return Response({"error": "Passwords are not matching!"}, status=status.HTTP_403_FORBIDDEN)
                 except Exception as e:
                     return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)  # Handle email sending errors
+    else:
+        return JsonResponse({"error": "Invalid OTP Token"}, status=status.HTTP_401_UNAUTHORIZED)
+        return JsonResponse({"error": "Invalid request method."}, status=status.HTTP_400_BAD_REQUEST)
 
-        else:
-            return Response({"error": "Invalid OTP Token"}, status=status.HTTP_401_UNAUTHORIZED)  # User not found response
-    return Response({"error": "Invalid request method."}, status=status.HTTP_400_BAD_REQUEST)  # Invalid method response
+# MongoEngine model
+class RideData(Document):
+    user_id = StringField(required=True)
+    timestamp = DateTimeField(default=datetime.utcnow)
+
+def test_mongo(request):
+    ride = RideData(user_id="test_user").save()
+    return JsonResponse({
+        "message": "MongoDB is working!",
+        "user_id": ride.user_id,
+        "timestamp": str(ride.timestamp)
+    })
+
+def index(request):
+    return HttpResponse("<h1>🚴‍♂️ Redback SmartBike Backend Running!</h1>")
+
+from django.http import JsonResponse
+from backend_server.mongo_models import AppUser
+
+def create_test_user(request):
+    try:
+        user = AppUser(
+            email="test@example.com",
+            username="testuser",
+            password="hashed_password123"
+        )
+        user.save()
+        return JsonResponse({"message": "User created successfully!"})
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+else:
+    return Response({"error": "Invalid OTP Token"}, status=status.HTTP_401_UNAUTHORIZED)  # User not found response
+return Response({"error": "Invalid request method."}, status=status.HTTP_400_BAD_REQUEST)  # Invalid method response
 
 def getDebugMode():
     return os.getenv('DEBUG','').strip().upper() == 'TRUE'

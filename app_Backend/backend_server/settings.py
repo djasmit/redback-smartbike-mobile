@@ -16,9 +16,8 @@ from dotenv import load_dotenv
 
 
 # load environment variables from .env file from project root
-print(Path('.'))
-env_path = Path('.') / '.env'
-load_dotenv(env_path)
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+load_dotenv(BASE_DIR / ".env")
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -31,6 +30,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
+
 
 
 # settings.py
@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'corsheaders',
     'django.contrib.staticfiles',
     'backend_server'
 ]
@@ -64,6 +65,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -94,12 +96,30 @@ WSGI_APPLICATION = 'backend_server.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+from mongoengine import connect
+from urllib.parse import quote_plus
+
+MONGO_USER = os.getenv("MONGO_USER")
+MONGO_PASSWORD = quote_plus(os.getenv("MONGO_PASSWORD"))
+
+connect(
+    db='redback_bike',
+    host=f"mongodb+srv://{MONGO_USER}:{MONGO_PASSWORD}@cluster0.w70fu.mongodb.net/redback_bike?retryWrites=true&w=majority&appName=Cluster0",
+    username=MONGO_USER,
+    password=os.getenv("MONGO_PASSWORD"),
+    authentication_source='admin'
+)
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.dummy'
     }
 }
+
+
+
+
+
 
 
 # Password validation
@@ -200,13 +220,16 @@ CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
+CORS_ALLOW_ALL_ORIGINS = True
+
+
 
 #forget password
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'sandbox.smtp.mailtrap.io'
-EMAIL_PORT = 2525
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'c1b94fb9443342'
-EMAIL_HOST_PASSWORD = '73d6f00407f892'
-EMAIL_USE_SSL = False
-DEFAULT_FROM_EMAIL = 'webmaster@example.com'
+#EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+#EMAIL_HOST = 'sandbox.smtp.mailtrap.io'
+#EMAIL_PORT = 2525
+#EMAIL_USE_TLS = True
+#MAIL_HOST_USER = ''
+#EMAIL_HOST_PASSWORD = ''
+#EMAIL_USE_SSL = False
+#DEFAULT_FROM_EMAIL = 'webmaster@example.com'

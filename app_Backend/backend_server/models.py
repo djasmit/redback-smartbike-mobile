@@ -229,6 +229,7 @@ class WorkoutAnalysis(models.Model):
     workout_duration = models.IntegerField(null=True, blank=True)
     avg_temperature = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
 
+
 class Schedule(models.Model):
     user = models.ForeignKey(MyUser, on_delete=models.CASCADE)
     title = models.CharField(max_length=100, default='Workout')
