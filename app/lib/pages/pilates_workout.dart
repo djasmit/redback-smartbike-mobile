@@ -17,7 +17,7 @@ import 'package:http/http.dart' as http;
 // TODO: in Django models change the user, workout_type to not be null
 
 class Workout5 extends StatefulWidget {
-  const Workout5({super.key, required this.title});
+  const Workout5({Key? key, required this.title}) : super(key: key);
   final String title;
 
   @override
@@ -201,13 +201,13 @@ class _WorkoutState extends State<Workout5> {
                             Expanded(
                               child: WorkoutMetricBox(
                                 label: "Speed",
-                                value: "${speedVal.toStringAsFixed(2)} km/h",
+                                value: speedVal.toStringAsFixed(2) + " km/h",
                               ),
                             ),
                             Expanded(
                               child: WorkoutMetricBox(
                                 label: "RPM",
-                                value: "$rpmVal RPM",
+                                value: rpmVal.toString() + " RPM",
                               ),
                             ),
                           ],
@@ -218,7 +218,7 @@ class _WorkoutState extends State<Workout5> {
                             Expanded(
                               child: WorkoutMetricBox(
                                 label: "Distance",
-                                value: "${distanceVal.toStringAsFixed(2)} km",
+                                value: distanceVal.toStringAsFixed(2) + " km",
                               ),
                             ),
                             Expanded(
@@ -235,13 +235,13 @@ class _WorkoutState extends State<Workout5> {
                             Expanded(
                               child: WorkoutMetricBox(
                                 label: "Heart Rate",
-                                value: "$heartRateVal BPM",
+                                value: heartRateVal.toString() + " BPM",
                               ),
                             ),
                             Expanded(
                               child: WorkoutMetricBox(
                                 label: "Temperature",
-                                value: "${temperatureVal.toStringAsFixed(2)}°C",
+                                value: temperatureVal.toStringAsFixed(2) + "°C",
                               ),
                             ),
                           ],
@@ -255,7 +255,7 @@ class _WorkoutState extends State<Workout5> {
                         children: [
                           Padding(
                             padding: const EdgeInsets.only(top: 20),
-                            child: SizedBox(
+                            child: Container(
                               width: 300,
                               child: BottomButton(
                                   onTap: () {
@@ -292,7 +292,7 @@ class _WorkoutState extends State<Workout5> {
   Future<String> getSessionId() async {
     return Provider.of<WorkoutTypeProvider>(context, listen: false)
         .workoutType!
-        .sessionId;
+        .sessionId!;
   }
 
   // Send a POST request to Django

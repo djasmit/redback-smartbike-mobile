@@ -17,8 +17,6 @@ import 'edit_profile.dart';
 import 'login.dart';
 
 class EditProfileActivity extends StatelessWidget {
-  const EditProfileActivity({super.key});
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -68,6 +66,7 @@ class EditProfileActivity extends StatelessWidget {
                             const SizedBox(height: 50),
                             Image.network(
                               userDetails != null &&
+                                      userDetails.imagePath != null &&
                                       userDetails.imagePath.isNotEmpty
                                   ? '${dotenv.env['API_URL_BASE']}${userDetails.imagePath}'
                                   : '${dotenv.env['API_URL_BASE']}/media/images/default.jpeg', // Provide a default image path if userDetails or imagePath is null or empty

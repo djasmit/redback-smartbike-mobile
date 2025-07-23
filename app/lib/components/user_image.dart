@@ -4,8 +4,7 @@ import 'package:phone_app/utilities/constants.dart';
 
 class UserImage extends StatelessWidget {
   // custom constructor
-  const UserImage({
-    super.key,
+  UserImage({
     required this.onTap,
     required this.userImage,
     this.updatePic = true,
@@ -28,7 +27,7 @@ class UserImage extends StatelessWidget {
           bottom: 0,
           right: 0,
           child: updatePic
-              ? SizedBox(
+              ? Container(
                   height: 40,
                   width: 40,
                   child: InkWell(

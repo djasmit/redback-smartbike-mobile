@@ -3,15 +3,14 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
 
 class NotificationService {
-  static final FlutterLocalNotificationsPlugin _notificationsPlugin =
-      FlutterLocalNotificationsPlugin();
+  static final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
 
   // Initialize notification settings
   static Future<void> initialize() async {
     tz.initializeTimeZones();
 
     var androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    var iosSettings = DarwinInitializationSettings();
+    var iosSettings = IOSInitializationSettings();
 
     var initializationSettings = InitializationSettings(
       android: androidSettings,
@@ -30,18 +29,17 @@ class NotificationService {
       priority: Priority.high,
     );
 
-    var iosDetails = DarwinNotificationDetails();
-    var platformDetails =
-        NotificationDetails(android: androidDetails, iOS: iosDetails);
+    var iosDetails = IOSNotificationDetails();
+    var platformDetails = NotificationDetails(android: androidDetails, iOS: iosDetails);
+
     await _notificationsPlugin.zonedSchedule(
       0,
       'Reminder',
       'This is your scheduled notification!',
       tz.TZDateTime.from(scheduledDateTime, tz.local),
       platformDetails,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      // uiTimezone: tz.local.name, // ✅ NEW: Required if you want time zone awareness
-      matchDateTimeComponents: null, // Optional
+      androidAllowWhileIdle: true,
+      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
     );
   }
 

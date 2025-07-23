@@ -17,14 +17,12 @@ import 'package:uuid/uuid.dart';
 import 'home_page.dart';
 
 class WorkoutSummary extends StatefulWidget {
-  const WorkoutSummary({super.key});
-
   @override
   _WorkoutSummaryState createState() => _WorkoutSummaryState();
 }
 
 class _WorkoutSummaryState extends State<WorkoutSummary> {
-  final int _currentIndex = 1;
+  int _currentIndex = 1;
   @override
   Widget build(BuildContext context) {
     return Scaffold(

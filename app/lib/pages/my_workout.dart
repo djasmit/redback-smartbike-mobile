@@ -12,7 +12,7 @@ import '../components/activity_buttons.dart';
 import '../provider/wrk_type_provider.dart'; // save current workout settings
 
 class MyWorkout extends StatefulWidget {
-  const MyWorkout({super.key, required this.title});
+  const MyWorkout({Key? key, required this.title}) : super(key: key);
   final String title;
 
   @override
@@ -20,7 +20,7 @@ class MyWorkout extends StatefulWidget {
 }
 
 class _MyWorkoutState extends State<MyWorkout> {
-  final int _currentIndex = 0;
+  int _currentIndex = 0;
 
   @override
   Widget build(BuildContext context) {

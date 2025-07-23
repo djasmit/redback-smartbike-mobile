@@ -5,7 +5,7 @@ import '../gps.dart';
 class TimerPage extends StatefulWidget {
   final String title;
 
-  const TimerPage({super.key, required this.title});
+  TimerPage({required this.title});
 
   @override
   _TimerPageState createState() => _TimerPageState();

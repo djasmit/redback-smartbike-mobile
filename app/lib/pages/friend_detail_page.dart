@@ -8,7 +8,7 @@ import '../components/main_app_background.dart'; // Ensure correct path
 class FriendDetailPage extends StatelessWidget {
   final FriendModel friend;
 
-  const FriendDetailPage({super.key, required this.friend});
+  FriendDetailPage({Key? key, required this.friend}) : super(key: key);
 
   Future<void> _launchURL(String url) async {
     if (await canLaunch(url)) {
@@ -39,7 +39,7 @@ class FriendDetailPage extends StatelessWidget {
         centerTitle: true,
       ),
       body: CustomGradientContainerSoft(
-        child: SizedBox(
+        child: Container(
           width: double.infinity,
           height: double.infinity,
           child: SingleChildScrollView(

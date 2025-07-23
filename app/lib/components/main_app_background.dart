@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 class CustomGradientContainerSoft extends StatelessWidget {
   final Widget child;
 
-  const CustomGradientContainerSoft({super.key, required this.child});
+  const CustomGradientContainerSoft({Key? key, required this.child})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
