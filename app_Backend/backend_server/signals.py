@@ -1,6 +1,7 @@
 from django.db.models.signals import post_save
+from mongoengine import signals #required for MongoDB signals
 from django.dispatch import receiver
-from .models import MyUser, AccountDetails,WorkoutType, WorkoutEntry
+from .models import MyUser, HelpCentreMessage, AccountDetails,WorkoutType, WorkoutEntry
 from .tasks import clean_workout_data_task
 import logging
 
@@ -10,13 +11,23 @@ logger = logging.getLogger(__name__)
 
 # Every time a new user is created in warehouse model (where the request is sent to), 
 # the email and username values are passed there too. Those will not de editable so can be sent once.
-@receiver(post_save, sender=MyUser)
+'''@receiver(post_save, sender=MyUser)
 def pass_from_MyUser_to_AccDet(sender, instance, created, **kwargs):
     if created:
         AccountDetails.objects.create(
             email=instance,  
             username=MyUser.objects.get(username=instance.username), 
+        )'''
+
+#mongoDB version
+def pass_from_MyUser_to_AccDet(sender, document, created, **kwargs):
+    if created:
+        AccountDetails.objects.create(
+            user=document,
+            email=document.email,  
+            username=document.username, 
         )
+signals.post_save.connect(pass_from_MyUser_to_AccDet, sender=MyUser)
 
 # every time the workout is finished (WorkoutType 'processed' set to True, trigger the clean$ analysis)
 @receiver(post_save, sender=WorkoutType)

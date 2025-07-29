@@ -1,11 +1,13 @@
-from rest_framework import serializers
+from rest_framework import serializers #use for MySql
+from rest_framework_mongoengine.serializers import DocumentSerializer
 from .models import MyUser, AccountDetails, HelpCentreMessage, TerminateAccountMessage, WorkoutType, WorkoutEntry, WorkoutAnalysis
 from django.contrib.auth.hashers import make_password
 import os
 from django.conf import settings
+from rest_framework_mongoengine.fields import ReferenceField
 
 # Serializer for the Users model to convert Python objects to JSON
-class UserSerializer(serializers.ModelSerializer):
+class UserSerializer(DocumentSerializer):
     login_id = serializers.CharField(required=False) 
     login_type = serializers.CharField(required=False) 
     otp = serializers.CharField(required=False)
@@ -30,7 +32,7 @@ class UserSerializer(serializers.ModelSerializer):
         validated_data['password'] = make_password(validated_data['password'])
         return super().create(validated_data)
 
-class SocialMediaUserSerializer(serializers.ModelSerializer):
+class SocialMediaUserSerializer(DocumentSerializer):
     password = serializers.CharField(required=False)
     otp = serializers.CharField(required=False) 
     class Meta:
@@ -53,33 +55,36 @@ class SocialMediaUserSerializer(serializers.ModelSerializer):
         validated_data['password'] = make_password(validated_data['password'])
         return super().create(validated_data)
 
-class AccountDetailsSerializer(serializers.ModelSerializer):
+class AccountDetailsSerializer(DocumentSerializer):
     class Meta:
         model = AccountDetails
-        fields = ['email', 'username', 'name', 'surname', 'dob', 'phone_number', 'image'] 
+        fields = ['id', 'email', 'username', 'name', 'surname', 'dob', 'phone_number', 'image'] 
 
-class HelpCentreMsgSerializer(serializers.ModelSerializer):
+class HelpCentreMsgSerializer(DocumentSerializer):
     class Meta:
         model = HelpCentreMessage
-        fields = ['thread_number', 'email', 'subject', 'topic', 'message_body', 'timestamp_sent', 'timestamp_read','is_read', 'status','actions'] 
+        fields = ['id', 'email', 'subject', 'topic', 'message_body', 'timestamp_sent', 'timestamp_read','is_read', 'status','actions'] 
 
-class TerminateAccMsgSerializer(serializers.ModelSerializer):
+class TerminateAccMsgSerializer(DocumentSerializer):
     class Meta:
         model = TerminateAccountMessage
-        fields = ['reason', 'message_body', 'submitted_at', 'reviewed'] 
+        fields = ['id', 'reason', 'message_body', 'submitted_at', 'reviewed'] 
 
-class WorkoutTypeSerializer(serializers.ModelSerializer):
+class WorkoutTypeSerializer(DocumentSerializer):
     class Meta:
         model = WorkoutType
-        fields = ['session_id', 'email', 'name', 'session_duration', 'level', 'type', 'finished', 'processed']
+        fields = ['id', 'email', 'name', 'session_duration', 'level', 'type', 'finished', 'processed']        
+        extra_kwargs = {
+            'id': {'required': False, 'read_only': False}  # allow manual setting
+        }
 
-class WorkoutEntrySerializer(serializers.ModelSerializer):
+class WorkoutEntrySerializer(DocumentSerializer):
     class Meta:
         model = WorkoutEntry
-        fields = ['session_id', 'speed', 'rpm', 'distance', 'heart_rate', 'temperature', 'incline', 'timestamp',] 
+        fields = ['id', 'session_id', 'speed', 'rpm', 'distance', 'heart_rate', 'temperature', 'incline', 'timestamp'] 
 # or :  fields = '__all__'   if we want to choose all fields
 
-class WorkoutAnalysisSerializer(serializers.ModelSerializer):
+class WorkoutAnalysisSerializer(DocumentSerializer):
     class Meta:
         model = WorkoutAnalysis
         fields = '__all__' 

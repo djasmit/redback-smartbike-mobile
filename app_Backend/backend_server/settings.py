@@ -16,11 +16,12 @@ from dotenv import load_dotenv
 
 
 # load environment variables from .env file from project root
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
-load_dotenv(BASE_DIR / ".env")
+#BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / ".env")
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
@@ -99,9 +100,10 @@ WSGI_APPLICATION = 'backend_server.wsgi.application'
 from mongoengine import connect
 from urllib.parse import quote_plus
 
-MONGO_USER = os.getenv("MONGO_USER")
-MONGO_PASSWORD = quote_plus(os.getenv("MONGO_PASSWORD"))
 
+#production code
+'''MONGO_USER = os.getenv("MONGO_USER")
+MONGO_PASSWORD = quote_plus(os.getenv("MONGO_PASSWORD")) #will crash if env field not found
 connect(
     db='redback_bike',
     host=f"mongodb+srv://{MONGO_USER}:{MONGO_PASSWORD}@cluster0.w70fu.mongodb.net/redback_bike?retryWrites=true&w=majority&appName=Cluster0",
@@ -109,13 +111,23 @@ connect(
     password=os.getenv("MONGO_PASSWORD"),
     authentication_source='admin'
 )
+'''
 
+#probably should move this to settings, but this is the default MongoDB server/port
+connect(
+    db='redback_bike',
+    host='mongodb://localhost:27017/redback_bike'
+)
+
+#dummy database for testing
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.dummy'
     }
 }
 
+#required to stop DJANGO ORM from taking over 
+SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
 
 
 

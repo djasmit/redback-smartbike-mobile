@@ -1,6 +1,8 @@
 from django.db import models
 from django.utils import timezone
+from mongoengine import Document, UUIDField, StringField, DateTimeField, BooleanField, DateField, IntField, DecimalField, ReferenceField, CASCADE
 import uuid
+from datetime import datetime, timedelta 
 
 
 # When creating a user you need to provide all 3 fields, out of which:
@@ -8,21 +10,21 @@ import uuid
 #           - username will need to be unique
 #   TODO:   - set password max length to 20 in Flutter
 #           - used in Flutter in signup.dart
-class MyUser(models.Model):
-    id = models.CharField(max_length=50, unique=True, default='')
-    email = models.CharField(max_length=50, primary_key=True )
-    username = models.CharField(max_length=20, unique=True)
-    password = models.CharField(max_length=20)
-    user_created = models.DateTimeField(null=True, max_length=50)
-    login_type = models.CharField(null=True, max_length=20)
-    login_id = models.CharField(null=True, max_length=50, unique=True)
-    otp = models.CharField(max_length=6, blank=True, null=True)  # OTP field
-    otp_created_at = models.DateTimeField(blank=True, null=True)  # Optional: to track OTP creation time
+class MyUser(Document):
+    id = IntField(primary_key=True, binary=False)  # Explicit ID field (can be UUID, etc.)
+    email = StringField(required=True)
+    username = StringField(required=True, unique=True)
+    password = StringField(required=True)
+    user_created = DateTimeField(default=datetime.utcnow)
+    login_type = StringField(default='')
+    login_id = StringField(unique=True, required=False, sparse=True, default='') #added sparse to ensure nulls don't clash in MongoDB
+    otp = StringField(default='')
+    otp_created_at = DateTimeField()
 
     # generate the id, starting at 1000, and add 1 to each new user
     def save(self, *args, **kwargs):
         self.email = self.email.strip().lower() ##lowercase email
-
+        #old ID system
         if not self.id:  # If id is not already set
             last_user = MyUser.objects.order_by('-id').first()
             if last_user:
@@ -30,7 +32,9 @@ class MyUser(models.Model):
             else:
                 last_id = 999  # Starting from 1000
             self.id = str(last_id + 1)  # Increment the id
+    
         super(MyUser, self).save(*args, **kwargs)
+
 
     def set_otp_hash(self, otp_hash):
         self.otp_hash = otp_hash
@@ -48,16 +52,17 @@ class MyUser(models.Model):
 #           - all fields except for user can be empty, as when we create a user we have to edit the profile and provide those values 
 #           - the user instance also serves as a PK here  
 #           - used in Flutter in edit_profile.dart     
-class AccountDetails(models.Model):
-    email = models.OneToOneField(MyUser, on_delete=models.CASCADE, related_name='email_accountdetails',
-                                 primary_key=True, to_field='email')
-    username = models.OneToOneField(MyUser, on_delete=models.CASCADE, related_name='username_accountdetails',
-                                    unique=True, to_field='username')
-    name = models.CharField(max_length=50, default="", blank=True)  # Add default value here
-    surname = models.CharField(max_length=50, blank=True)
-    dob = models.DateField(null=True, blank=True)
-    phone_number = models.CharField(max_length=15, null=True, blank=True)
-    image = models.ImageField(null=True, blank=True, upload_to='images/')
+class AccountDetails(Document):
+    id = UUIDField(primary_key=True, default=uuid.uuid4, binary=False)  # Explicit ID field (can be UUID, etc.)
+
+    user = ReferenceField(MyUser, reverse_delete_rule=CASCADE, required=True)
+    email = StringField(default='')
+    username = StringField(default='')
+    name = StringField(max_length=50, default="", blank=True)  # Add default value here
+    surname = StringField(max_length=50, blank=True, default='')
+    dob = DateTimeField(null=True, blank=True, default=datetime.utcnow) # was models.datefield
+    phone_number = StringField(max_length=15, null=True, blank=True, default='')
+    image = StringField(null=True, blank=True, upload_to='images/', default='') #was models.imageField
 
 
 # help centre (HC) messages
@@ -68,7 +73,7 @@ class AccountDetails(models.Model):
 #           - subject, topic, message_body cannot be empty
 #           - topic, status, actions have pre defined options
 #           - used in Flutter in contact.dart
-class HelpCentreMessage(models.Model):
+class HelpCentreMessage(Document):
     GENERAL_INQUIRY = 'General Inquiry'
     TECHNICAL_SUPPORT = 'Technical Support'
     BILLING_ISSUE = 'Billing Issue'
@@ -96,17 +101,17 @@ class HelpCentreMessage(models.Model):
         (ESCALATED, 'Escalated'),
     ]
 
-    thread_number = models.UUIDField(max_length=100, unique=True,
-                                     default=uuid.uuid4)  # UUID format, generate in flutter and pass
-    email = models.ForeignKey(MyUser, on_delete=models.CASCADE)
-    subject = models.CharField(max_length=50)
-    topic = models.CharField(max_length=30, choices=TOPIC_CHOICES)
-    message_body = models.CharField(max_length=1000)
-    timestamp_sent = models.DateTimeField()  # provided from flutter
-    timestamp_read = models.DateTimeField(null=True, blank=True)  # this will be empty first, updated from admin panel
-    is_read = models.BooleanField(default=False)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=OPEN)
-    actions = models.CharField(max_length=20, choices=ACTIONS_CHOICES, default=AWAITING_REVIEW)
+    id = UUIDField(primary_key=True, default=uuid.uuid4, binary=False)  # Explicit ID field (can be UUID, etc.)
+    user = ReferenceField(MyUser, reverse_delete_rule=CASCADE, required=True)
+    email = StringField()
+    subject = StringField(max_length=50, default='')
+    topic = StringField(max_length=30, choices=TOPIC_CHOICES, default=GENERAL_INQUIRY)
+    message_body = StringField(max_length=1000, default='')
+    timestamp_sent = DateTimeField(default=datetime.utcnow)  # provided from flutter
+    timestamp_read = DateTimeField(null=True, blank=True)  # this will be empty first, updated from admin panel
+    is_read = BooleanField(default=False)
+    status = StringField(max_length=20, choices=STATUS_CHOICES, default=OPEN)
+    actions = StringField(max_length=20, choices=ACTIONS_CHOICES, default=AWAITING_REVIEW)
 
 # TODO: in frontend impose max char constraint for subject , message_body
 
@@ -114,7 +119,7 @@ class HelpCentreMessage(models.Model):
 #           - we do not keep any user details
 #           - reason, message_body cannot be null
 #           - there are 4 pre defined reason options   
-class TerminateAccountMessage(models.Model):
+class TerminateAccountMessage(Document):
     POOR_SERVICE = 'Poor Service'
     FOUND_A_BETTER_SERVICE = 'Found A Better Service'
     PRIVACY_CONCERNS = 'Privacy Concerns'
@@ -126,10 +131,11 @@ class TerminateAccountMessage(models.Model):
         (OTHER, 'Other'),
     ]
 
-    reason = models.CharField(max_length=50, choices=REASON_CHOICES)
-    message_body = models.CharField(max_length=1000)
-    submitted_at = models.DateTimeField(null=True, blank=True)
-    reviewed = models.BooleanField(default=False)
+    id = UUIDField(primary_key=True, default=uuid.uuid4, binary=False)  # Explicit ID field (can be UUID, etc.)
+    reason = StringField(max_length=50, choices=REASON_CHOICES, default='')
+    message_body = StringField(max_length=1000, default='')
+    submitted_at = DateTimeField(null=True, blank=True, default=datetime.utcnow)
+    reviewed = BooleanField(default=False)
 
 
 # here we have a workout type when setting the details in set_workout_page in Flutter. An instance of this will be
@@ -137,7 +143,7 @@ class TerminateAccountMessage(models.Model):
 #           - timestamp is created here automatically
 #           - the names of the choices NEED to match the values you send from Flutter
 #           - based on the session_id relationship here (PK) and with WorkoutEntry table where it is an FK, you can perform joins like LEFT OUTER JOIN to get one table with all data to work on
-class WorkoutType(models.Model):
+class WorkoutType(Document):
     VR_GAME = 'VR Game'
     CYCLING = 'Cycling'
     RUNNING = 'Running'
@@ -181,69 +187,70 @@ class WorkoutType(models.Model):
         (CONTINUOUS, 'Continuous'),
     ]
 
-    session_id = models.UUIDField(primary_key=True, default=uuid.uuid4, unique=True)
-    email = models.ForeignKey(MyUser, on_delete=models.CASCADE, default='',
-                              to_field='email')  # when user deleted, delete records too
-    name = models.CharField(max_length=20, choices=NAME_CHOICES)
-    session_duration = models.IntegerField(choices=DURATION_CHOICES)
-    level = models.CharField(max_length=20, choices=LEVEL_CHOICES)
-    type = models.CharField(max_length=20, choices=TYPE_CHOICES)
-    created_at = models.DateTimeField(default=timezone.now)
-    finished = models.BooleanField(default=False)
-    processed = models.BooleanField(
+    id = UUIDField(primary_key=True, default=uuid.uuid4, unique=True, binary=False)
+    user_id = ReferenceField(MyUser, reverse_delete_rule=CASCADE, required=True)
+    email = StringField(default='')
+    name = StringField(max_length=20, choices=NAME_CHOICES, default=VR_GAME)
+    session_duration = IntField(choices=DURATION_CHOICES, default=15)
+    level = StringField(max_length=20, choices=LEVEL_CHOICES, default=BEGINNER)
+    type = StringField(max_length=20, choices=TYPE_CHOICES, default=INTERVAL)
+    created_at = DateTimeField(default=timezone.now)
+    finished = BooleanField(default=False)
+    processed = BooleanField(
         default=False)  # this feature is used to automate data processing; by default is False, when changed to TRue it will trigger data clean & proc
 
     # this is for admin interface
-    def __str__(self):
-        return self.name
+    #def __str__(self):
+    #    return self.name
 # this is where we will store data points (every second, every 5 seconds we'll see?)
 # Each WorkoutType can have multiple WorkoutEntries
 # Each WorkoutEntry can be associated with only 1 WorkoutType and 1 User
 #           - again once we delete the used from User table, those records will be deleted as well
 #           - UUID will be generated once for a sessionm in Flutter
 #           - the attributes (speed, rpm etc) can be null as different workouts will collect different measures
-class WorkoutEntry(models.Model):
-    session_id = models.ForeignKey(WorkoutType, on_delete=models.CASCADE, related_name='session_id_workouttype',
-                                   to_field='session_id')
-    speed = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
-    rpm = models.IntegerField(null=True, blank=True)
-    distance = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
-    heart_rate = models.IntegerField(null=True, blank=True)
-    temperature = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
-    incline = models.IntegerField(null=True, blank=True)
-    timestamp = models.DateTimeField(null=True,
+class WorkoutEntry(Document):
+    id = UUIDField(primary_key=True, default=uuid.uuid4, binary=False)  # Explicit ID field (can be UUID, etc.)
+    session_id = ReferenceField(WorkoutType, reverse_delete_rule=CASCADE, required=True)
+    speed = DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    rpm = IntField(null=True, blank=True)
+    distance = DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    heart_rate = IntField(null=True, blank=True)
+    temperature = DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    incline = IntField(null=True, blank=True)
+    timestamp = DateTimeField(null=True,
                                      blank=True)  # because sometimes there might be errors when collecting data
 
     # this is for admin interface
-    def __str__(self):
-        return f"Workout for {self.user.username} - {self.workout_type.name}"
+    #def __str__(self):
+    #    return f"Workout for {self.user.username} - {self.workout_type.name}"
 
 
-class WorkoutAnalysis(models.Model):
-    session_id = models.ForeignKey(WorkoutType, on_delete=models.CASCADE, related_name='session_id_workoutanalysis',
-                                   to_field='session_id')
-    avg_speed = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
-    max_speed = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
-    total_distance = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
-    avg_heart_rate = models.IntegerField(null=True, blank=True)
-    workout_duration = models.IntegerField(null=True, blank=True)
-    avg_temperature = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+class WorkoutAnalysis(Document):
+    id = UUIDField(primary_key=True, default=uuid.uuid4, binary=False)  # Explicit ID field (can be UUID, etc.)
+    session_id = ReferenceField(WorkoutType, reverse_delete_rule=CASCADE)
+    avg_speed = DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, default=0)
+    max_speed = DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, default=0)
+    total_distance = DecimalField(max_digits=6, decimal_places=2, null=True, blank=True, default=0)
+    avg_heart_rate = IntField(null=True, blank=True, default=0)
+    workout_duration = IntField(null=True, blank=True, default=0)
+    avg_temperature = DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, default=0)
 
 
-class Schedule(models.Model):
-    user = models.ForeignKey(MyUser, on_delete=models.CASCADE)
-    title = models.CharField(max_length=100, default='Workout')
-    description = models.TextField(blank=True, null=True)
-    date = models.DateField()
-    time = models.TimeField()
-    reminder_minutes = models.IntegerField(default=0)  # e.g. 60 for 1 hour before
-    recurrence = models.CharField(max_length=20, choices=[
+class Schedule(Document):
+    id = UUIDField(primary_key=True, default=uuid.uuid4, binary=False)  # Explicit ID field (can be UUID, etc.)
+    user = ReferenceField(MyUser, reverse_delete_rule=CASCADE)
+    title = StringField(max_length=100, default='Workout')
+    description = StringField(blank=True, null=True)
+    date = DateTimeField() #was models.datefield
+    time = StringField() #was models.timeField
+    reminder_minutes = IntField(default=0)  # e.g. 60 for 1 hour before
+    recurrence = StringField(max_length=20, choices=[
         ('None', 'None'),
         ('Daily', 'Daily'),
         ('Weekly', 'Weekly'),
         ('Monthly', 'Monthly'),
     ], default='None')
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.user.username} - {self.title} on {self.date} at {self.time}" #updated code
