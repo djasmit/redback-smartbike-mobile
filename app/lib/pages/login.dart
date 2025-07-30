@@ -40,8 +40,6 @@ class LoginApp extends StatelessWidget {
 }
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
-
   @override
   _LoginPageState createState() => _LoginPageState();
 }
@@ -141,7 +139,7 @@ class _LoginPageState extends State<LoginPage> {
         message = 'This username does not exist in the warehouse records.';
       } else {
         message =
-            'An error occurred. Please try again later. Details: ${response.body} ${response.statusCode} ';
+        'An error occurred. Please try again later. Details: ${response.body} ${response.statusCode} ';
         print('${response.body} ${response.statusCode} ');
       }
       showDialog(
@@ -209,16 +207,16 @@ class _LoginPageState extends State<LoginPage> {
                     );
                   },
                   child:
-                      Text('Forgotten Password?', style: kSubTitleLoginStatic),
+                  Text('Forgotten Password?', style: kSubTitleLoginStatic),
                 ),
                 _isLoading
                     ? CircularProgressIndicator() // Show loading indicator while processing
                     : BottomButton(
-                        onTap: () {
-                          login(context);
-                        },
-                        buttonText: 'Log In',
-                      ),
+                  onTap: () {
+                    login(context);
+                  },
+                  buttonText: 'Log In',
+                ),
                 SizedBox(height: 10),
                 SocialLoginButton(
                   height: 50,
@@ -297,8 +295,7 @@ class _LoginPageState extends State<LoginPage> {
     }
 
     await dotenv.load(fileName: ".env");
-    String? baseURL = dotenv.env[
-        'API_URL_BASE']; // only the partial, network specific to each team member
+    String? baseURL = dotenv.env['API_URL_BASE']; // only the partial, network specific to each team member
     final apiUrl = '$baseURL/login-sm/';
 
     final interceptor = MyHttpInterceptor(http.Client());

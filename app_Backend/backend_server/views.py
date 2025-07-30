@@ -1,7 +1,8 @@
 from django.conf import settings
-from .models import MyUser, AccountDetails, HelpCentreMessage, TerminateAccountMessage, WorkoutType, WorkoutAnalysis
+from .models import MyUser, AccountDetails, HelpCentreMessage, TerminateAccountMessage, WorkoutType, WorkoutEntry, WorkoutAnalysis
 from .serializers import UserSerializer, AccountDetailsSerializer, HelpCentreMsgSerializer, TerminateAccMsgSerializer, \
     WorkoutEntrySerializer, WorkoutTypeSerializer, SocialMediaUserSerializer, WorkoutAnalysisSerializer
+from rest_framework_mongoengine.serializers import DocumentSerializer
 from .forms import UserCreationForm, SignUpForm, LoginForm
 from django.http import JsonResponse
 from django.core.exceptions import ObjectDoesNotExist
@@ -33,8 +34,11 @@ import json
 from .models import MyUser
 import random
 from django.utils import timezone
-from django.contrib.auth.hashers import check_password
-from django.contrib.auth.hashers import make_password
+from django.http import JsonResponse, HttpResponse
+from mongoengine import Document, StringField, DateTimeField
+from django.contrib.auth.hashers import check_password, make_password
+import uuid
+
 import os
 
 logger = logging.getLogger(__name__)
@@ -50,31 +54,37 @@ def redirect_home(request):
 ##update/<str:userId>/
 @api_view(['GET', 'PUT', 'DELETE'])
 def user_detail(request, userId):
-    print('userId received:' + userId)
-    
-    #find account via MyUser id
-    user = MyUser.objects.filter(id=userId).first()
-    if (user == None):
-         return Response("User not found!", status=status.HTTP_404_NOT_FOUND) 
+    try:
+        print('userId received:' + userId)
 
-    account = AccountDetails.objects.filter(email=user).first()
-    if (account == None):
-         return Response("Account details not found!", status=status.HTTP_404_NOT_FOUND) 
+        #find account via MyUser id
+        target_uuid = int(userId)
+        print(userId)
+        user = MyUser.objects(id=target_uuid).first()
+        if (user == None):
+            return Response("User not found!", status=status.HTTP_404_NOT_FOUND) 
 
-    if request.method == 'GET':
-        serializer = AccountDetailsSerializer(account)
-        return Response(serializer.data)
-    elif request.method == 'PUT':
-        serializer = AccountDetailsSerializer(account, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
+        account = AccountDetails.objects.filter(user=user).first()
+        if (account == None):
+            return Response("Account details not found!", status=status.HTTP_404_NOT_FOUND) 
+
+        if request.method == 'GET':
+            serializer = AccountDetailsSerializer(account)
             return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        elif request.method == 'PUT':
+            serializer = AccountDetailsSerializer(account, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    ## dangerous - deletes account but not associated MyUser object
-    elif request.method == "DELETE":     
-        account.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        ## dangerous - deletes account but not associated MyUser object
+        elif request.method == "DELETE":     
+            account.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+            
+    except Exception as e:
+        return Response({"error": "Failed to get isers", "errors": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 ##UNUSED
 @api_view(['GET'])
@@ -92,27 +102,33 @@ def get_user_details(request, emaill, format=None):
 ##users/
 @api_view(['GET', 'POST'])
 def user_list(request, format=None):
-    if request.method == 'GET':
-        users = AccountDetails.objects.all()
-        serializer = AccountDetailsSerializer(users, many=True)
-        return Response(serializer.data)
-    elif request.method == 'POST':
-        serializer = AccountDetailsSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        if request.method == 'GET':
+            users = AccountDetails.objects.all()
+            serializer = AccountDetailsSerializer(users, many=True)
+            return Response(serializer.data)
+        elif request.method == 'POST':
+            serializer = AccountDetailsSerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({"error": "Failed to get isers", "errors": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 #view to create new direct or social-media account
 ##signup/
 @api_view(['POST'])
 def signup(request, format=None):
     if request.method == 'POST':
+        print(request.data)
         fetched_email = request.data.get("email")
         fetched_username = request.data.get("username")
 
-        email_is_exist = MyUser.objects.filter(email__iexact=fetched_email).exists()
-        username_is_exist = MyUser.objects.filter(username=fetched_username).exists()
+    try:
+        email_is_exist = MyUser.objects(email__iexact=fetched_email).first() is not None
+        username_is_exist = MyUser.objects(username=fetched_username).first() is not None
 
         if email_is_exist:
             return Response("This email already exists in our records.", status=status.HTTP_409_CONFLICT)
@@ -125,86 +141,108 @@ def signup(request, format=None):
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             else:
                 return Response({"message": "Failed to create user.", "errors": serializer.errors},  status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({"error": "Failed to login", "errors": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 #view to login to social media account
 ##login-sm/
 @api_view(['POST'])
 def social_media_login(request, format=None):
-    if request.method == 'POST':
-        fetched_email = request.data.get("email")
-        fetched_username = request.data.get("username")
-        fetched_id = request.data.get("login_id")
-        fetched_type = request.data.get("login_type")
+    try: 
+        if request.method == 'POST':
+            fetched_email = request.data.get("email")
+            fetched_username = request.data.get("username")
+            fetched_id = request.data.get("login_id")
+            fetched_type = request.data.get("login_type")
 
-        if fetched_id is None and fetched_type is None:
-            return Response({"message": "Failed to Authenticate User", "errors": "login_id and type is required!"},
-                            status=status.HTTP_403_FORBIDDEN)
-        
+            if fetched_id is None and fetched_type is None:
+                return Response({"message": "Failed to Authenticate User", "errors": "login_id and type is required!"},
+                                status=status.HTTP_403_FORBIDDEN)
+            
 
-        user_is_enrolled = MyUser.objects.filter(
-            Q(login_id=fetched_id) & Q(login_type=fetched_type) & Q(email__iexact=fetched_email)).first()
-        user_is_registered = MyUser.objects.filter(
-            Q(login_id__isnull=True) & Q(login_type__isnull=True) & Q(email__iexact=fetched_email)).exists()
+            user_is_enrolled = MyUser.objects.filter(
+                login_id=fetched_id, login_type=fetched_type, email__iexact=fetched_email).first() #update to work with MongoDB
+            user_is_registered = MyUser.objects.filter(
+                login_id=None, login_type = None, email__iexact=fetched_email).first() #update to work with MongoDB
 
-        if user_is_enrolled is not None:
-            account_details = AccountDetails.objects.filter(email=user_is_enrolled)
-            serializer = AccountDetailsSerializer(account_details, many=True)
-
-            return Response({
-                'message': 'Login successful',
-                'id': user_is_enrolled.id,
-                'account_details': serializer.data,
-            }, status=status.HTTP_200_OK)
-        elif user_is_registered:
-            return Response({"message": "User is already registered directly to the platform", "code": 1001},
-                            status=status.HTTP_400_BAD_REQUEST)
-        else:
-            serializer = SocialMediaUserSerializer(data=request.data)
-            if serializer.is_valid():
-                serializer.save()
-                
-                user = MyUser.objects.get(email__iexact=fetched_email)
-                account_details = AccountDetails.objects.filter(email=user)
-                account_serializer = AccountDetailsSerializer(account_details, many=True)
+            if user_is_enrolled is not None:
+                account_details = AccountDetails.objects.filter(user=user_is_enrolled)
+                serializer = AccountDetailsSerializer(account_details, many=True)
 
                 return Response({
-                    'message': 'Login successful - new user',
-                    'id': serializer.data["id"],
-                    'account_details': account_serializer.data,
+                    'message': 'Login successful',
+                    'id': str(user_is_enrolled.id),
+                    'account_details': serializer.data,
                 }, status=status.HTTP_200_OK)
-            elif serializer.errors.get('username') != "my user with this username already exists.":
-                suffix = str(datetime.now())[-5:]
-                request.data.update({"username": fetched_username + suffix})
+            elif user_is_registered:
+                return Response({"message": "User is already registered directly to the platform", "code": 1001},
+                                status=status.HTTP_400_BAD_REQUEST)
+            else:
                 serializer = SocialMediaUserSerializer(data=request.data)
                 if serializer.is_valid():
                     serializer.save()
-
-                    user = MyUser.objects.get(email__iexact=email)
-                    account_details = AccountDetails.objects.filter(email=user)
+                    
+                    user = MyUser.objects.get(email__iexact=fetched_email)
+                    account_details = AccountDetails.objects.filter(user=user)
                     account_serializer = AccountDetailsSerializer(account_details, many=True)
 
                     return Response({
                         'message': 'Login successful - new user',
-                        'id': serializer.data.id,
+                        'id': str(serializer.data["id"]),
                         'account_details': account_serializer.data,
                     }, status=status.HTTP_200_OK)
+                elif serializer.errors.get('username') != "my user with this username already exists.":
+                    suffix = str(datetime.now())[-5:]
+                    request.data.update({"username": fetched_username + suffix})
+                    serializer = SocialMediaUserSerializer(data=request.data)
+                    if serializer.is_valid():
+                        serializer.save()
+
+                        user = MyUser.objects.get(email__iexact=email)
+                        account_details = AccountDetails.objects.filter(user=user)
+                        account_serializer = AccountDetailsSerializer(account_details, many=True)
+
+                        return Response({
+                            'message': 'Login successful - new user',
+                            'id': str(serializer.data.id),
+                            'account_details': account_serializer.data,
+                        }, status=status.HTTP_200_OK)
+                    else:
+                        return Response({"message": "Failed to create user.", "errors": serializer.errors},
+                                        status=status.HTTP_400_BAD_REQUEST)
                 else:
                     return Response({"message": "Failed to create user.", "errors": serializer.errors},
                                     status=status.HTTP_400_BAD_REQUEST)
-            else:
-                return Response({"message": "Failed to create user.", "errors": serializer.errors},
-                                status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({"error": "Failed to signup", "errors": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 #view to create help center message
 ##messages/
 @api_view(['POST'])
 def help_center_message_create(request, format=None):
-    if request.method == 'POST':
-        serializer = HelpCentreMsgSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        if request.method == 'POST':
+
+            data = request.data.copy()
+            fetched_email = request.data.get("email")
+            try: user = MyUser.objects.get(email__iexact=fetched_email)
+            except: return Response({'error': 'Invalid Email!'}, status=status.HTTP_404_NOT_FOUND)
+
+            try:
+                entry = HelpCentreMessage(
+                    user = user,
+                    email=request.data.get('email'), subject=request.data.get('subject'), topic=request.data.get('topic'), message_body=request.data.get('message_body'), 
+                    is_read=request.data.get('is_read'), status=request.data.get('status'), actions=request.data.get('actions')
+                )
+                entry.save(force_insert=True) 
+                print(entry.id)
+                serializer = HelpCentreMsgSerializer(entry)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            except Exception as e: return Response(str(e), status=status.HTTP_400_BAD_REQUEST)
+
+    except Exception as e:
+        return Response({"error": "Failed to send message", "errors": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 #view to create termination account reasons message
 ##save_ta_message/
@@ -223,38 +261,45 @@ def terminate_account_message_create(request, format=None):
 @api_view(['POST'])
 @csrf_exempt
 def login_view(request):
-    if request.method == 'POST':
+    try:
+        if request.method == 'POST':
 
-        email = request.data.get('email')
-        password = request.data.get('password')
+            email = request.data.get('email')
+            password = request.data.get('password')
 
-        if (email == None or password == None):
-            return Response({'error': 'Invalid Login Fields!'}, status=status.HTTP_400_BAD_REQUEST)
+            if (email == None or password == None):
+                return Response({'error': 'Invalid Login Fields!'}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            user = MyUser.objects.get(email__iexact=email)
-            if user.password == password:
-                request.session['email'] = user.email
-                request.session['id'] = user.id  
+            try:
+                user = MyUser.objects.get(email__iexact=email)
+                print(check_password(password, user.password))
+                if check_password(password, user.password): #compares received password to stored hashed
+                    request.session['email'] = user.email
+                    print(user.id)
+                    request.session['id'] = str(user.id) #JSON cannot serialize pure UUID
 
-                print(user.email)
-                account_details = AccountDetails.objects.filter(email=user)
-                serializer = AccountDetailsSerializer(account_details, many=True)
+                    print(user.email)
+                    account_details = AccountDetails.objects.filter(user=user)
+                    serializer = AccountDetailsSerializer(account_details, many=True)
 
-                return Response({
-                    'message': 'Login successful',
-                    'id': user.id,
-                    'account_details': serializer.data,
-                }, status=status.HTTP_200_OK)
-            else:
-                return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND) #was 401, but we don't want to tell hackers they have the right email
-        except MyUser.DoesNotExist:
-            return Response({'error': 'Email or password details incorrect'}, status=status.HTTP_401_UNAUTHORIZED)
-        except Exception as e:
-            return Response({"error": "Failed to login", "errors": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                    print("ready response")
+
+                    return Response({
+                        'message': 'Login successful',
+                        'id': str(user.id),  #JSON cannot serialize pure UUID
+                        'account_details': serializer.data,
+                    }, status=status.HTTP_200_OK)
+                else:
+                    return Response({'error': 'Email or password details incorrect'}, status=status.HTTP_401_UNAUTHORIZED)
+            except MyUser.DoesNotExist:
+                return Response({'error': 'Email or password details incorrect'}, status=status.HTTP_401_UNAUTHORIZED)
+            except Exception as e:
+                return Response({"error": "Failed to login", "errors": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    except Exception as e:
+        return Response({"error": "Failed to login", "errors": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # view to authenticate account password (only used for termination)
-##user/authenticate/ requires: ?<password>
+##user/authenticate/<str:userID>
 @api_view(['POST']) #changed to post for more secure authorization
 @csrf_exempt
 def auth_password(request, format=None):
@@ -265,7 +310,7 @@ def auth_password(request, format=None):
         print(f'userId: {userId}, password: {password}') #debug
         try:
             user = MyUser.objects.get(id=userId) 
-            if user.password == password: 
+            if check_password(password, user.password):  #compares received password to stored hashed
                 return Response(status=status.HTTP_200_OK)
             else:
                 return Response(status=status.HTTP_403_FORBIDDEN)
@@ -275,7 +320,7 @@ def auth_password(request, format=None):
         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 #view to delete user account
-##user/delete/<int:id>/
+##user/delete/<str:userId>/
 @api_view(['DELETE']) #replaced email with userID for more security
 @csrf_exempt
 def delete_user(request, userId):
@@ -309,34 +354,53 @@ def set_workout(request):
             data = request.data.copy()
 
             if ('email') in data:
-                email_is_exist = MyUser.objects.filter(email__iexact=data['email']).exists()
+                email_is_exist = MyUser.objects.filter(email__iexact=data['email']).first()
                 if (not email_is_exist): return Response({"message": "Failed to create workout.", "errors": "User not Found"}, status=status.HTTP_404_NOT_FOUND)
             else: return Response({"message": "Failed to create workout.", "errors": "User not Found"}, status=status.HTTP_404_NOT_FOUND)
 
-            #block manual setting of session_ID in production mode, but allow setting for testing in debug
-            if ('session_id' in data):
-                if (not getDebugMode()):
-                    data['session_id'] = None
-                
-            workout_type_serializer = WorkoutTypeSerializer(data=data)
-            if workout_type_serializer.is_valid():
-                workout_type = workout_type_serializer.save()
-                return Response(workout_type_serializer.data, status=status.HTTP_201_CREATED)
-            else:
-                return Response({"message": "Failed to create workout.", "errors": workout_type_serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+            #manually recreating entry to force that reference link - find a better way!!
+            try:
+                entry = WorkoutType(
+                    id = request.data.get('session_id') if settings.DEBUG else None, #block manual setting of session_ID in production mode, but allow setting for testing in debug
+                    user_id = email_is_exist,
+                    email=request.data.get('email'), name=request.data.get('name'), session_duration=request.data.get('session_duration'), 
+                    level=request.data.get('level'), type=request.data.get('type'), finished=request.data.get('finished'), processed=request.data.get('processed')
+                )
+                entry.save(force_insert=True) 
+                print(entry.id)
+                serializer = WorkoutTypeSerializer(entry)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            except Exception as e: return Response({"message": "Failed to create workout.", "errors": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({"message": "Failed to create workout.", "errors": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 #view to create workout entry for a given workout
-##setworkout/
+##workoutdata/
 @api_view(['POST'])
 def wrk_data(request):
     if request.method == 'POST':
-        serializer = WorkoutEntrySerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
+
+        try:
+            if ('session_id') in request.data:
+                workout_type = WorkoutType.objects.filter(id=request.data['session_id']).first()
+                if (not workout_type): return Response({"message": "Failed to create workout data.", "errors": "Session ID not Found"}, status=status.HTTP_404_NOT_FOUND)
+
+            else: return Response({"message": "Failed to create workout data.", "errors": "Session ID not Found"}, status=status.HTTP_404_NOT_FOUND)
+
+            #manually recreating entry to force that reference link - find a better way!!
+            entry = WorkoutEntry(
+                session_id = workout_type,
+                speed=request.data.get('speed'), rpm=request.data.get('rpm'), distance=request.data.get('distance'), heart_rate=request.data.get('heart_rate'),
+                 temperature=request.data.get('temperature'), incline=request.data.get('incline'), timestamp=request.data.get('timestamp')
+            )
+            entry.save(force_insert=True) 
+            print(entry)
+            serializer = WorkoutEntrySerializer(entry)
+            serializer.session_id = workout_type
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+
+            return Response({"message": "Failed to gen workout data.", "errors": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class WorkoutViewSet(viewsets.ModelViewSet):
     queryset = WorkoutType.objects.all()
@@ -403,7 +467,7 @@ def get_otp(increment):
     otp_min = 100000
     otp_max = 999999
 
-    if getDebugMode():
+    if settings.DEBUG:
         increment = int(increment)
         otp = str(otp_min+increment)
     else:
@@ -460,50 +524,56 @@ def password_reset_request(request):
 
 
 # View to handle otp verification
-##user/password_reset/otp_validate
+##user/password_reset/otp_validate/
 @api_view(['POST'])
 @csrf_exempt
 def password_reset_otp_validation(request):
-    if request.method == "POST":
-        otp = request.data.get('otp')
-        email = request.data.get('email','').strip().lower()
+    try:
+        if request.method == "POST":
+            otp = request.data.get('otp')
+            email = request.data.get('email','').strip().lower()
 
-        otp_email = otp + email
-        hashed_otp = hashlib.md5(otp_email.encode()).hexdigest()
-        user = MyUser.objects.filter(Q(otp=hashed_otp) & Q(email=email)).first()  # Find the otp user
-        print(f'{email}, {otp}')
-        print(hashed_otp)
-        
+            otp_email = otp + email
+            hashed_otp = hashlib.md5(otp_email.encode()).hexdigest()
+            user = MyUser.objects.filter(otp=hashed_otp, email=email).first()  # Find the otp user
+            print(f'{email}, {otp}')
+            print(hashed_otp)
+            
 
-        if user:  # If user exists
-            print(user.email)
-            now = timezone.now()
+            if user:  # If user exists
+                print(user.email)
 
-            # Check if the datetime object is more than 4 minutes old
-            if user.otp_created_at and user.otp_created_at < now - timedelta(minutes=4):
-                logger.warning(f"User with email {email} entered wrong otp")
-                return Response({"error": "Expired OTP"}, status=status.HTTP_401_UNAUTHORIZED)
+                # Check if the datetime object is more than 4 minutes old
+                otp_time = user.otp_created_at #workaround to avoid offset-naive and offset-aware datetime 
+                if otp_time is not None:
+                    if timezone.is_naive(otp_time):
+                        otp_time = timezone.make_aware(otp_time)
+
+                if otp_time < timezone.now() - timedelta(minutes=4):
+                    logger.warning(f"User with email {email} entered wrong otp")
+                    return Response({"error": "Expired OTP"}, status=status.HTTP_401_UNAUTHORIZED)
+                else:
+                    try:
+                        otp = get_otp(1)
+                        otp_email = otp + email
+                        hashed_otp = hashlib.md5(otp_email.encode()).hexdigest()
+
+                        user.otp = hashed_otp
+                        user.otp_created_at = None
+                        print(f'out: {hashed_otp}')
+                        user.save()
+
+                        return Response({"message": "OTP validated successfully", "otp_token": hashed_otp}, status=status.HTTP_200_OK)
+
+                    except Exception as e:
+                        logger.error(f"Error Saving validated OTP")
+                    return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)  # Handle email sending errors
+
             else:
-                try:
-                    otp = get_otp(1)
-                    otp_email = otp + email
-                    hashed_otp = hashlib.md5(otp_email.encode()).hexdigest()
-
-                    user.otp = hashed_otp
-                    user.otp_created_at = None
-                    print(f'out: {hashed_otp}')
-                    user.save()
-
-                    return Response({"message": "OTP validated successfully", "otp_token": hashed_otp}, status=status.HTTP_200_OK)
-
-                except Exception as e:
-                    logger.error(f"Error Saving validated OTP")
-                return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)  # Handle email sending errors
-
-        else:
-            return Response({"error": "Invalid OTP"}, status=status.HTTP_401_UNAUTHORIZED)  # User not found response
-    return Response({"error": "Invalid request method."}, status=status.HTTP_400_BAD_REQUEST)  # Invalid method response
-
+                return Response({"error": "Invalid OTP"}, status=status.HTTP_401_UNAUTHORIZED)  # User not found response
+        return Response({"error": "Invalid request method."}, status=status.HTTP_400_BAD_REQUEST)  # Invalid method response
+    except Exception as e:
+        return Response({"error": "Failed to get isers", "errors": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)   
 
 # View to handle otp verification
 ##user/password_reset/new_password
@@ -515,7 +585,10 @@ def password_reset_new_password(request):
         email = request.data.get('email','').strip().lower()
         password = request.data.get('password')
         re_password = request.data.get('re_password')
-        user = MyUser.objects.filter(Q(otp=otp_token) & Q(email__iexact=email)).first()  # Find the otp user
+        
+        print(otp_token)
+        user = MyUser.objects.filter(otp=otp_token, email__iexact=email).first()  # Find the otp user
+        print(user)
 
         if user:  # If user exists
 
@@ -526,16 +599,17 @@ def password_reset_new_password(request):
                 try:
                     if password is not None and password != "" and password == re_password:
                         user.otp = None
-                        user.password = password
+                        user.password = make_password(password) #hash new password
                         user.save()
                         return Response({"message": "Password reset successful."}, status=status.HTTP_200_OK)
                     else:
                         return Response({"error": "Passwords are not matching!"}, status=status.HTTP_403_FORBIDDEN)
                 except Exception as e:
                     return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)  # Handle email sending errors
-    else:
-        return JsonResponse({"error": "Invalid OTP Token"}, status=status.HTTP_401_UNAUTHORIZED)
-        return JsonResponse({"error": "Invalid request method."}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return JsonResponse({"error": "Invalid OTP Token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    return JsonResponse({"error": "Invalid request method."}, status=status.HTTP_400_BAD_REQUEST)
 
 # MongoEngine model
 class RideData(Document):
@@ -568,9 +642,27 @@ def create_test_user(request):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
-        else:
-            return Response({"error": "Invalid OTP Token"}, status=status.HTTP_401_UNAUTHORIZED)  # User not found response
     return Response({"error": "Invalid request method."}, status=status.HTTP_400_BAD_REQUEST)  # Invalid method response
-
+    
+#depreciated should remove, use settings Debug value instead
 def getDebugMode():
     return os.getenv('DEBUG','').strip().upper() == 'TRUE'
+  
+# --- Schedule Views ---
+@api_view(['POST'])
+def create_schedule(request):
+    serializer = ScheduleSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+@api_view(['GET'])
+def get_schedules(request, email):
+    try:
+        user = MyUser.objects.get(email=email)
+        schedules = Schedule.objects.filter(user=user).order_by('date', 'time')
+        serializer = ScheduleSerializer(schedules, many=True)
+        return Response(serializer.data)
+    except MyUser.DoesNotExist:
+        return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)

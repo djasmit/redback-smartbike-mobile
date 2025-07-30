@@ -13,8 +13,6 @@ import '../provider/user_data_provider.dart';
 // TODO: for MFA or sth
 
 class EmailScreen extends StatefulWidget {
-  const EmailScreen({super.key});
-
   @override
   _EmailScreenState createState() => _EmailScreenState();
 }

@@ -27,7 +27,7 @@ List<String> topics = [
 ];
 
 class Workout extends StatefulWidget {
-  const Workout({super.key, required this.title});
+  const Workout({Key? key, required this.title}) : super(key: key);
   final String title;
 
   @override
@@ -376,7 +376,8 @@ class _WorkoutState extends State<Workout> {
                             Expanded(
                               child: WorkoutMetricBox(
                                 label: "Resistance",
-                                value: avgResistanceVal.toStringAsFixed(2),
+                                value:
+                                    "${avgResistanceVal.toStringAsFixed(2)}",
                               ),
                             ),
                           ],
@@ -390,7 +391,7 @@ class _WorkoutState extends State<Workout> {
                         children: [
                           Padding(
                             padding: const EdgeInsets.only(top: 20),
-                            child: SizedBox(
+                            child: Container(
                               width: 300,
                               child: BottomButton(
                                   onTap: () async {
@@ -517,13 +518,13 @@ class _WorkoutState extends State<Workout> {
         context,
         MaterialPageRoute(
           builder: (context) => SmartBikeSummary(
-            speed: speedVal.toStringAsFixed(2),
-            rpm: rpmVal.toString(),
-            distance: distanceVal.toStringAsFixed(2),
-            heartRate: heartRateVal.toStringAsFixed(2),
-            resistance: avgResistanceVal.toStringAsFixed(2),
-            incline: avgInclineVal.toStringAsFixed(2),
-          ),
+        speed: speedVal.toStringAsFixed(2),
+        rpm: rpmVal.toString(),
+        distance: distanceVal.toStringAsFixed(2),
+        heartRate: heartRateVal.toStringAsFixed(2),
+        resistance: avgResistanceVal.toStringAsFixed(2),
+        incline: avgInclineVal.toStringAsFixed(2),
+      ),
         ),
       );
     } else {

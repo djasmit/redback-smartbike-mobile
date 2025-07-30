@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
@@ -10,6 +11,7 @@ import '../components/login_signup_background.dart';
 import '../components/reset_password_session.dart';
 import '../components/text_tap_button.dart';
 import '../utilities/constants.dart';
+import 'login.dart';
 import 'signup.dart';
 
 class PasswordResetOtpValidatePagePage extends StatelessWidget {
@@ -179,7 +181,10 @@ class PasswordResetOtpValidatePagePage extends StatelessWidget {
                       buttonTextActive: 'Resend OTP'),
                   const Spacer(),
                   TextTapButton(
-                      onTap: () => {cache.clearCache(), Navigator.pop(context)},
+                      onTap: () => {
+                            cache.clearCache(),
+                            Navigator.pop(context)
+                          },
                       buttonTextStatic: "Change the ",
                       buttonTextActive: 'Email'),
                   const Spacer(),
@@ -221,8 +226,7 @@ class PasswordResetOtpValidatePagePage extends StatelessWidget {
   void showLoader(BuildContext context) {
     showDialog(
       context: context,
-      barrierDismissible:
-          false, // Prevent dismissing the dialog by tapping outside
+      barrierDismissible: false, // Prevent dismissing the dialog by tapping outside
       builder: (BuildContext context) {
         return const AlertDialog(
           content: Row(

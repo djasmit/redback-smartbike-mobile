@@ -3,9 +3,8 @@ import 'package:phone_app/utilities/constants.dart';
 
 class TextTapButton extends StatelessWidget {
   // custom constructor
-  const TextTapButton(
-      {super.key,
-      required this.onTap,
+  TextTapButton(
+      {required this.onTap,
       this.buttonTextStatic,
       required this.buttonTextActive});
 

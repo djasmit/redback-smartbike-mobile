@@ -16,13 +16,12 @@ import 'package:uuid/uuid.dart';
 import 'home_page.dart';
 
 class MessageCenter extends StatefulWidget {
-  const MessageCenter({super.key});
-
   @override
   _MessageCenterState createState() => _MessageCenterState();
 }
 
 class _MessageCenterState extends State<MessageCenter> {
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -50,6 +49,5 @@ class _MessageCenterState extends State<MessageCenter> {
               ),
             ),
           ),
-        ));
-  }
+        ));}
 }

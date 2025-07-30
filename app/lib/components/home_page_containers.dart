@@ -8,8 +8,7 @@ class RoundedGreyContainer extends StatelessWidget {
   final String? imagePath;
   final String? defaultImagePath;
 
-  const RoundedGreyContainer({
-    super.key,
+  RoundedGreyContainer({
     required this.width,
     required this.height,
     required this.children,

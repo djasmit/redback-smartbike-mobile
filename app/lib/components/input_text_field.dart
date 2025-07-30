@@ -4,7 +4,6 @@ import 'package:phone_app/utilities/constants.dart';
 class InputTextField extends StatefulWidget {
   // custom constructor
   InputTextField({
-    super.key,
     this.onChangedDo,
     required this.buttonText,
     this.fieldController,

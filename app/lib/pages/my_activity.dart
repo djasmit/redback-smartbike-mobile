@@ -13,14 +13,14 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:analog_clock/analog_clock.dart';
 
 class MyActivity extends StatefulWidget {
-  const MyActivity({super.key, required this.title});
+  const MyActivity({Key? key, required this.title}) : super(key: key);
   final String title;
   @override
   MyActivityState createState() => MyActivityState();
 }
 
 class MyActivityState extends State<MyActivity> {
-  final int _currentIndex = 3;
+  int _currentIndex = 3;
 
   @override
   Widget build(BuildContext context) {
@@ -72,7 +72,8 @@ class MyActivityState extends State<MyActivity> {
                             RoundedGreyContainer(
                                 width: 140,
                                 height: 140,
-                                imagePath: userDetails.imagePath != null &&
+                                imagePath: userDetails != null &&
+                                        userDetails.imagePath != null &&
                                         userDetails.imagePath.isNotEmpty
                                     ? '${dotenv.env['API_URL_BASE']}${userDetails.imagePath}'
                                     : '${dotenv.env['API_URL_BASE']}/media/images/default.jpeg',
